@@ -8,10 +8,10 @@ class MyPromise {
     this.value = undefined;
     this.reason = undefined;
     this.onResolveCallbacks = [];
-    this.onRejectedClaaback = [];
+    this.onRejectedCallbacks = [];
 
     let resolve = (value) => {
-      if (this.status == PENDING) {
+      if (this.status === PENDING) {
         this.status = FULFILLED;
         this.value = value
         this.onResolveCallbacks.map(fn => fn())
@@ -19,10 +19,10 @@ class MyPromise {
     }
 
     let reject = (reason) => {
-      if (this.status == PENDING) {
+      if (this.status === PENDING) {
         this.status = REJECTED;
         this.reason = reason;
-        this.onRejectedClaaback.map(fn => fn())
+        this.onRejectedCallbacks.map(fn => fn())
       }
     }
 
@@ -33,76 +33,102 @@ class MyPromise {
     }
   };
   then(onFulfilled, onRejected) {
-    onFulfilled = typeof onFulfilled === 'function' ? onFulfilled : (value) => { };
-    onRejected = typeof onRejected === 'function' ? onRejected : (value) => { };
+    onFulfilled = typeof onFulfilled === 'function' ? onFulfilled : value => {};
+    onRejected = typeof onRejected === 'function' ? onRejected : err => {throw err
+    };;
 
     switch (this.status) {
       case PENDING: {
-        return new Promise((resolve, reject) => {
+        return new MyPromise((resolve, reject) => {
           this.onResolveCallbacks.push(() => {
+            try {
+              const result = onFulfilled(this.value);
+              if (result instanceof MyPromise) {
+                result.then(resolve, reject);
+              } else {
+                resolve(result);
+              }
+            } catch (error) {
+              reject(error);
+            }
+          })
+          this.onRejectedCallbacks.push(() => {
+            try {
+              const result = onRejected(this.reason);
+              if (result instanceof MyPromise) {
+                result.then(resolve, reject);
+              } else {
+                reject(this.reason);
+              }
+            } catch (error) {
+              reject(error);
+            }
+          })
+        })
+      }
+      case FULFILLED: {
+        return new MyPromise((resolve, reject) => {
+          try {
             const result = onFulfilled(this.value);
             if (result instanceof MyPromise) {
               result.then(resolve, reject);
             } else {
               resolve(result);
             }
-          })
-          this.onRejectedClaaback.push(() => {
-            const result = onRejected(this.reason);
-            if (result instanceof MyPromise) {
-              result.then(resolve, reject);
-            } else {
-              reject(result);
-            }
-          })
-
-        })
-      }
-      case FULFILLED: {
-        return new MyPromise((resolve, reject) => {
-          const result = onFulfilled(this.value);
-          if (result instanceof MyPromise) {
-            result.then(resolve, reject);
-          } else {
-            resolve(result);
+          } catch (error) {
+            reject(error);
           }
+
         })
       }
       case REJECTED: {
         return new MyPromise((resolve, reject) => {
-          const result = onRejected(this.reason);
-          if (result instanceof MyPromise) {
-            result.then(resolve, reject);
-          } else {
-            reject(result);
+          try {
+            const result = onRejected(this.reason);
+            if (result instanceof MyPromise) {
+              result.then(resolve, reject);
+            } else {
+              reject(this.reason);
+            }
+          } catch (error) {
+            reject(error)
           }
         })
       }
 
     }
   };
-  catch(onRejected) {
+  catch (onRejected) {
     return this.then(undefined, onRejected)
   };
 }
 
 
 console.log("1");
-const p = new MyPromise((resolve, reject) => {
-  console.log("2");
 
-  // reject("失败");
+const p = new MyPromise((resolve, reject) => {
   setTimeout(() => {
-    console.log("4");
-    resolve("成功");
-  }, 0);
-})
-p.then((res) => {
-  console.log(res, "3");
-})
-  .catch((res) => {
-    console.log(res, "f");
+    // reject("error");
+    resolve("hello world"); // 不好使了
+    resolve("hello world2"); // 不好使了
+  }, 1000);
+});
+
+// p.then(value => console.log(value + "dpf"))
+//   .then(()=>console.log(211))
+//   .catch((err)=>{
+//     console.log(err);
+//   }
+//   );
+// p.then(value => console.log(value + "dpf"))
+
+
+p.then((res)=>{
+  let a= new MyPromise((resolve,rejected)=>{
+    resolve("then promise")
   })
-p.then(res => {
-  console.log(null);
+  return a
+  // console.log(res);
+}).then((res)=>{
+  console.log(res);
 })
